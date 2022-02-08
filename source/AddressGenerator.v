@@ -23,10 +23,6 @@ module AddressGenerator (input             clk,reset,
 
 // ---------------------------------------------------------------------------
 /*
-There are different number of stages for each NTT operations
-For an N-point NTT, there are log(N) stages
-With 32 PUs, we need N/64 butterfly operations in each stage
-
 c_stage --> counter for stage
 c_loop  --> counter for butterfly operations in each stage
 c_tw    --> counter for twiddle factor reading in each stage
@@ -45,18 +41,6 @@ reg [3:0] c_wait_limit;
 reg [3:0] c_wait;
 reg [2*`PE*(`PE_DEPTH+1)-1:0] brscramble;
 
-// ---------------------------------------------------------------------------
-// FSM
-/*
-FSM:
-   ______          ______          ______          ______
-  |      |        |      | -----> |      | -----> | NTT  |
-  | IDLE | -----> | NTT  |        | WAIT |        | LAST |
-  |______|        |______| <----- |______| <----- |______|
-      ^                              |
-      |______________________________|
-
-*/
 reg [2:0] curr_state,next_state;
 reg       intt;
 reg ntt2;
@@ -134,7 +118,7 @@ end
 
 // ---------------------------------------------------------------------------
 // Control operations
-// wait counter & wait counter values (We can improve this by spending less time on 16-bit)
+
 always @(posedge clk) begin
     if(reset) begin
         c_wait_limit <= 0;

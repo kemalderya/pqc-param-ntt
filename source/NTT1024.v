@@ -1,54 +1,5 @@
 `include "defines.v"
 
-// I/O control unit needs to be designed accordingly as show below (later)
-/*
-            ______     ____________     ______
-           |      |   |            |   |      |
-          -| FIFO |-->|            |-->| FIFO |-
-         / |______|   |            |   |______| \
-        /             |            |             \
-              ...  -->|            |-->   ...     \
-            ______    |            |    ______
-           |      |   |            |   |      |
-IN -> .. --| FIFO |-->|   NTT1024  |-->| FIFO |-- .. -> OUT
-           |______|   |            |   |______|
-                      |            |
-       \      ...  -->|            |-->   ...     /
-        \   ______    |            |    ______   /
-         \ |      |   |            |   |      | /
-          -| FIFO |-->|            |-->| FIFO |-
-           |______|   |____________|   |______|
-
-*/
-
-/*
-This hardware has 64*2=128 BRAMs for storing input polynomials
-This hardware has 64 BRAMs for twiddle factors
-This hardware uses 64 Processing Units (PUs) and performs NTT for 6 different parameter sets
--- pset[0]: n=256,  q=18-bit, log2n(Kyber)
--- pset[1]: n=256,  q=16-bit, logn(Kyber2)
--- pset[2]: n=512,  q=20-bit, log2n(NewHope-512, Falcon-I)
--- pset[3]: n=256,  q=27-bit, log2n(Dilithium)
--- pset[4]: n=1024, q=22-bit, log2n(Newhope-1024, Falcon-II)
--- pset[5]: n=1024, q=33-bit, log2n(Tesla-1)
-*/
-
-// input OP_CODE (valid for 1 cc, then input starts coming)
-// OP_CODE: 0 -> IDLE                                     --> Waits for data or start signal
-// OP_CODE: 1 -> pset + op_type | q | N_inv (takes 3 cc)  --> Reads operation type, modulus and n_inv
-// OP_CODE: 2 -> W + W_inv                                --> Reads and store twiddle factors
-// OP_CODE: 3 -> DATA#0                                   --> Reads and store input polynomial
-// OP_CODE: 4 -> START_OP                                 --> Starts operation
-
-//                _
-// OP_CODE:   ___| |__________
-//                   __    __
-// din_valid: ______|   ...  |___
-//                   __    __
-// din:       ______|   ...  |___
-
-// done : HIGH for 1 cc (after 1 cc, data starts going out)
-
 module NTT1024(input             clk,reset,
                input      [3:0]  OP_CODE,
                input             din_valid,
@@ -60,16 +11,7 @@ module NTT1024(input             clk,reset,
                );
 // ---------------------------------------------------------------- connections
 
-// parameters & control
-/*
-We have 6 states:
--- 0 : OP_IDLE       --> Idle state, waiting for input
--- 1 : OP_READ_PSET  --> reading parameter type, q and n_inv
--- 2 : OP_READ_W     --> reading twiddle factors
--- 3 : OP_READ_DATA0 --> reading input polynomial
--- 4 : OP_NTT        --> performing NTT operation
--- 5 : OP_SEND_DATA0 --> sending out output polynomial
-*/
+
 reg [4:0] curr_state,next_state;
 
 reg [31:0]q;
@@ -84,7 +26,7 @@ parameter c_param_limit = 2'd2;
 
 reg [1:0]             c_param              ;  // counter for OP_READ_PSET state
 reg [`TW_DEPTH+3:0] c_tw                 ;  // counter for OP_READ_W state
-reg [10:0] c_data               ;  // counter for OP_READ_DATA0
+reg [10:0] c_data               ;  
 
 reg              c_op;  // counter for OP_NTT state
 reg [(`BRAM_DEPTH-1):0] c_out                ;  // counter for OP_SEND_DATA0 state
@@ -128,16 +70,6 @@ wire[31:0] NTToutODD  [`PE-1:0];
 wire[31:0] MULout     [(2*`PE)-1:0];
 
 // ---------------------------------------------------------------- FSM
-
-// always go back to IDLE after any state (except for OP_NTT which goes to OP_SEND_DATA0)
-
-// -- states
-// 0 : OP_IDLE
-// 1 : OP_READ_PSET
-// 2 : OP_READ_W
-// 3 : OP_READ_DATA0
-// 4 : OP_NTT
-// 5 : OP_SEND_DATA0
 
 always @(posedge clk) begin
     if(reset)
@@ -255,8 +187,6 @@ always @(posedge clk) begin
     end
 end
 
-// ---------------------------------------------------------------- W (9'd256: is for MSB of address)
-
 always @(posedge clk) begin
     if(reset) begin
         c_tw <= 0;
@@ -294,9 +224,6 @@ always @(posedge clk) begin
 end
 
 // ---------------------------------------------------------------- OP
-/*
-It takes different number of clock cycles for each operation to be performed
-*/
 
 always @(posedge clk) begin
     if(reset) begin
@@ -313,9 +240,6 @@ always @(posedge clk) begin
 end
 
 // ---------------------------------------------------------------- OUT
-/*
-It takes N/32 clock cycles for sending resulting polynomial to out
-*/
 
 always @(posedge clk) begin
     if(reset) begin
@@ -424,7 +348,6 @@ end
 
 /*
 In state OP_READ_W, twiddle factors are stored into BRAMs.
-In other states, they are only read8.
 */
 
 // twiddle (write)
@@ -464,10 +387,6 @@ always @(posedge clk) begin
         end
     end
 end
-
-/*
-Here, we use an alternating memory addressing scheme for NTT operation.
-*/
 
 integer n = 0;
 

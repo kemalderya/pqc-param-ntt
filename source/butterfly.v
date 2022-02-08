@@ -136,7 +136,7 @@ module butterfly(a, b, w, q, CT, i, clk, reset, r0, res2, r02, r1, add, sub
         sub   <= sub2r;
     end
     
-    mont_redu_top3 k(a4, wr, q, i, clk, reset, res);
+    mont_redu_top  k(a4, wr, q, i, clk, reset, res);
     modular_add    k1(a6, b2, q, mod_a);
     modular_sub    k2(a6, b2, q, mod_s);    
     

@@ -29,7 +29,6 @@
 
 `define DATA_SIZE       1024 >> `PE_DEPTH
 `define DATA_SIZE_TW    1024 >> (`PE_DEPTH >> 1)
-//`define DATA_SIZE_TW    (1024 >> ((`PE_DEPTH+1)>>1)) + (1024 >> (`PE_DEPTH >> 1))
 `define BRAM_DEPTH      ($clog2(1024 >> `PE_DEPTH))
 `define TW_DEPTH        ($clog2(1024 >> (`PE_DEPTH >> 1)))
 `define MAX             9'd511
